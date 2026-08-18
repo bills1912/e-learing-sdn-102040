@@ -15,6 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
         ]);
+
+        // Railway (and most PaaS platforms) terminate HTTPS at their own edge
+        // and forward requests to this container as plain HTTP. Without this,
+        // Laravel doesn't know the original request was secure, and generates
+        // http:// URLs for assets (CSS/JS) — which browsers silently block as
+        // mixed content on an https:// page.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

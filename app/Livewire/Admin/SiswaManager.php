@@ -7,9 +7,12 @@ use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Livewire\WithPagination;
 
 class SiswaManager extends BaseComponent
 {
+    use WithPagination;
+
     public bool $showModal = false;
     public ?string $editId = null;
     public ?string $deleteId = null;
@@ -22,6 +25,80 @@ class SiswaManager extends BaseComponent
     public string $alamat = '';
 
     public string $filterKelas = '';
+    public string $search = '';
+
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterKelas(): void
+    {
+        $this->resetPage();
+    }
+
+    public function resetFilters(): void
+    {
+        $this->reset('search', 'filterKelas');
+        $this->resetPage();
+    }
+
+    /** Base query shared by the table and the export (respects search + kelas filter). */
+    protected function filteredQuery()
+    {
+        $query = Siswa::with(['user', 'kelas'])->orderBy('nama_siswa');
+
+        if ($this->filterKelas) {
+            $query->where('kelas_id', $this->filterKelas);
+        }
+
+        $term = trim($this->search);
+        if ($term !== '') {
+            $userIds = User::where('role', 'siswa')
+                ->where('email', 'like', '%' . $term . '%')
+                ->pluck('_id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+
+            $query->where(function ($q) use ($term, $userIds) {
+                $q->where('nama_siswa', 'like', '%' . $term . '%')
+                  ->orWhere('nis', 'like', '%' . $term . '%');
+                if ($userIds) {
+                    $q->orWhereIn('user_id', $userIds);
+                }
+            });
+        }
+
+        return $query;
+    }
+
+    /** Export the currently filtered students as a CSV that opens cleanly in Excel. */
+    public function export()
+    {
+        $rows = $this->filteredQuery()->get();
+        $filename = 'data-siswa-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel reads accents correctly
+            $put = fn (array $r) => fputcsv($out, $r, ';');
+
+            $put(['No', 'Nama Siswa', 'NIS', 'Jenis Kelamin', 'Kelas', 'Email', 'Alamat']);
+            foreach ($rows as $i => $s) {
+                $nis = (string) $s->nis;
+                $put([
+                    $i + 1,
+                    $s->nama_siswa,
+                    str_starts_with($nis, '0') ? '="' . $nis . '"' : $nis, // keep leading zeros in Excel
+                    $s->jenis_kelamin,
+                    $s->kelas->nama_kelas ?? '-',
+                    $s->user->email ?? '-',
+                    $s->alamat ?? '',
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
 
     public function create(): void
     {
@@ -124,14 +201,8 @@ class SiswaManager extends BaseComponent
 
     public function render()
     {
-        $query = Siswa::with(['user', 'kelas'])->orderBy('nama_siswa');
-
-        if ($this->filterKelas) {
-            $query->where('kelas_id', $this->filterKelas);
-        }
-
         return $this->view('livewire.admin.siswa-manager', [
-            'items' => $query->get(),
+            'items' => $this->filteredQuery()->paginate(10),
             'kelasList' => Kelas::orderBy('nama_kelas')->get(),
         ], 'Data Siswa', 'Kelola data siswa dan akun pembelajaran');
     }

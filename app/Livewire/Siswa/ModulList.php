@@ -10,6 +10,12 @@ use App\Models\Siswa;
 class ModulList extends BaseComponent
 {
     public string $filterMapel = '';
+    public string $search = '';
+
+    public function resetFilters(): void
+    {
+        $this->reset('search', 'filterMapel');
+    }
 
     protected function siswa(): ?Siswa
     {
@@ -23,6 +29,11 @@ class ModulList extends BaseComponent
 
         if ($this->filterMapel) {
             $query->where('mapel_id', $this->filterMapel);
+        }
+
+        $term = trim($this->search);
+        if ($term !== '') {
+            $query->where('judul_modul', 'like', '%' . $term . '%');
         }
 
         $modulList = $query->orderBy('mapel_id')->orderBy('urutan')->get();

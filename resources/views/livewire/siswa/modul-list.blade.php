@@ -4,9 +4,14 @@
         <x-stat-card icon="trophy" label="Modul Selesai" :value="$totalSelesai" color="mint" :index="1"/>
     </div>
 
-    <div class="flex items-center gap-3">
-        <p class="text-[13px] text-ink-soft/60">Filter:</p>
-        <div class="w-44">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="relative w-full sm:max-w-xs">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;align-items:center;pointer-events:none;" class="text-ink-soft/40">{!! \App\Support\Icons::svg('search', 'w-4 h-4') !!}</span>
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cari judul modul…"
+                       style="height:40px;padding:0 12px 0 38px;line-height:40px;"
+                       class="w-full rounded-lg border border-gray-300 bg-white text-[13px] text-ink placeholder:text-ink-soft/40 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition">
+        </div>
+        <div class="w-full sm:w-44">
             <x-select name="filterMapel" :live="true" placeholder="Semua Mapel" class="!py-1.5 !text-[12.5px]">
                 <option value="">Semua Mapel</option>
                 @foreach($mapelList as $mp)
@@ -14,10 +19,17 @@
                 @endforeach
             </x-select>
         </div>
+        @if($search !== '' || $filterMapel !== '')
+            <button type="button" wire:click="resetFilters" class="text-[12.5px] font-semibold text-primary-600 hover:text-primary-700 whitespace-nowrap self-start sm:self-center">Reset</button>
+        @endif
     </div>
 
     @if($grouped->isEmpty())
-        <div class="surface-card rounded-lg"><x-empty-state icon="academic-cap" title="Belum ada modul" subtitle="Modul pembelajaran dari guru Anda akan muncul di sini."/></div>
+        <div class="surface-card rounded-lg">@if($search !== '' || $filterMapel !== '')
+            <x-empty-state icon="search" title="Modul tidak ditemukan" subtitle="Coba kata kunci lain atau reset filter."/>
+        @else
+            <x-empty-state icon="academic-cap" title="Belum ada modul" subtitle="Modul pembelajaran dari guru Anda akan muncul di sini."/>
+        @endif</div>
     @else
         @foreach($grouped as $mapelName => $modulItems)
             <div class="surface-card rounded-lg p-4 sm:p-6">

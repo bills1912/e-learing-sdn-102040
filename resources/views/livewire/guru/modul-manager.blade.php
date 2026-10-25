@@ -1,13 +1,28 @@
 <div class="space-y-6">
-    <div class="flex items-center justify-between gap-2 flex-wrap">
-        <p class="text-[13px] text-ink-soft/60 shrink-0">{{ $items->count() }} modul</p>
-        <button wire:click="create" class="btn-primary">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+            <div class="relative w-full sm:max-w-xs">
+                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;align-items:center;pointer-events:none;" class="text-ink-soft/40">{!! \App\Support\Icons::svg('search', 'w-4 h-4') !!}</span>
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cari judul modul…"
+                       style="height:40px;padding:0 12px 0 38px;line-height:40px;"
+                       class="w-full rounded-lg border border-gray-300 bg-white text-[13px] text-ink placeholder:text-ink-soft/40 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition">
+            </div>
+            @if($search !== '')
+                <button type="button" wire:click="resetSearch" class="text-[12.5px] font-semibold text-primary-600 hover:text-primary-700 whitespace-nowrap">Reset</button>
+            @endif
+            <p class="text-[13px] text-ink-soft/60 shrink-0">{{ $items->count() }}{{ $search !== '' ? ' dari ' . $totalModul : '' }} modul</p>
+        </div>
+        <button wire:click="create" class="btn-primary self-start">
             {!! \App\Support\Icons::svg('plus', 'w-4 h-4') !!} Buat Modul
         </button>
     </div>
 
     @if($items->isEmpty())
-        <div class="surface-card rounded-lg"><x-empty-state icon="academic-cap" title="Belum ada modul" subtitle="Modul berisi pre-test, materi, dan post-test yang harus diselesaikan siswa secara berurutan."/></div>
+        <div class="surface-card rounded-lg">@if($search !== '')
+            <x-empty-state icon="search" title="Modul tidak ditemukan" subtitle="Tidak ada modul yang cocok dengan pencarian Anda."/>
+        @else
+            <x-empty-state icon="academic-cap" title="Belum ada modul" subtitle="Modul berisi pre-test, materi, dan post-test yang harus diselesaikan siswa secara berurutan."/>
+        @endif</div>
     @else
         <div class="space-y-4">
             @foreach($items as $i => $m)

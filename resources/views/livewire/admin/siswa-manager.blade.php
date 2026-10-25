@@ -1,8 +1,13 @@
 <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-            <p class="text-[13px] text-ink-soft/60">{{ $items->count() }} siswa</p>
-            <div class="w-44">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0">
+            <div class="relative w-full sm:max-w-xs">
+                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;align-items:center;pointer-events:none;" class="text-ink-soft/40">{!! \App\Support\Icons::svg('search', 'w-4 h-4') !!}</span>
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cari nama, NIS, atau email…"
+                       style="height:40px;padding:0 12px 0 38px;line-height:40px;"
+                       class="w-full rounded-lg border border-gray-300 bg-white text-[13px] text-ink placeholder:text-ink-soft/40 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none transition">
+            </div>
+            <div class="w-full sm:w-44">
                 <x-select name="filterKelas" :live="true" placeholder="Semua Kelas" class="!py-1.5 !text-[12.5px]">
                     <option value="">Semua Kelas</option>
                     @foreach($kelasList as $k)
@@ -10,14 +15,32 @@
                     @endforeach
                 </x-select>
             </div>
+            @if($search !== '' || $filterKelas !== '')
+                <button type="button" wire:click="resetFilters" class="text-[12.5px] font-semibold text-primary-600 hover:text-primary-700 whitespace-nowrap self-start sm:self-center">Reset</button>
+            @endif
+            <p class="text-[13px] text-ink-soft/60 whitespace-nowrap">{{ $items->total() }} siswa</p>
         </div>
-        <button wire:click="create" class="btn-primary self-start">
-            {!! \App\Support\Icons::svg('plus', 'w-4 h-4') !!} Tambah Siswa
-        </button>
+        <div class="flex items-center gap-2 self-start lg:self-auto">
+            <button type="button" wire:click="export" wire:loading.attr="disabled" wire:target="export"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-[13.5px] font-semibold text-ink hover:bg-gray-50 transition-colors disabled:opacity-60">
+                {!! \App\Support\Icons::svg('download', 'w-4 h-4') !!}
+                <span wire:loading.remove wire:target="export">Export</span>
+                <span wire:loading wire:target="export">Menyiapkan…</span>
+            </button>
+            <button wire:click="create" class="btn-primary">
+                {!! \App\Support\Icons::svg('plus', 'w-4 h-4') !!} Tambah Siswa
+            </button>
+        </div>
     </div>
 
     @if($items->isEmpty())
-        <div class="surface-card rounded-lg"><x-empty-state icon="user-graduate" title="Belum ada data siswa" subtitle="Klik “Tambah Siswa” untuk mendaftarkan siswa baru."/></div>
+        <div class="surface-card rounded-lg">
+            @if($search !== '' || $filterKelas !== '')
+                <x-empty-state icon="search" title="Siswa tidak ditemukan" subtitle="Coba kata kunci lain atau reset filter."/>
+            @else
+                <x-empty-state icon="user-graduate" title="Belum ada data siswa" subtitle="Klik “Tambah Siswa” untuk mendaftarkan siswa baru."/>
+            @endif
+        </div>
     @else
         <div class="surface-card rounded-lg overflow-hidden">
             <div class="overflow-x-auto scroll-thin">
@@ -59,7 +82,27 @@
                 </tbody>
             </table>
         </div>
-        </div>
+
+        @if($items->hasPages())
+            <div class="flex items-center justify-between gap-3 flex-wrap px-1">
+                <p class="text-[12.5px] text-ink-soft/60">
+                    Menampilkan {{ $items->firstItem() }}–{{ $items->lastItem() }} dari {{ $items->total() }} siswa
+                </p>
+                <div class="flex items-center gap-1">
+                    <button wire:click="previousPage" @disabled($items->onFirstPage())
+                            class="px-3 py-1.5 rounded-lg text-[12.5px] font-semibold text-ink-soft/70 hover:bg-primary-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors">
+                        ← Sebelumnya
+                    </button>
+                    <span class="px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 text-[12.5px] font-semibold">
+                        {{ $items->currentPage() }} / {{ $items->lastPage() }}
+                    </span>
+                    <button wire:click="nextPage" @disabled(! $items->hasMorePages())
+                            class="px-3 py-1.5 rounded-lg text-[12.5px] font-semibold text-ink-soft/70 hover:bg-primary-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors">
+                        Selanjutnya →
+                    </button>
+                </div>
+            </div>
+        @endif
     @endif
 
     <x-modal wire-show="showModal" :title="$editId ? 'Ubah Data Siswa' : 'Tambah Siswa Baru'" maxWidth="max-w-xl">

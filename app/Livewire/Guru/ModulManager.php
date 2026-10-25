@@ -17,6 +17,13 @@ class ModulManager extends BaseComponent
     public ?string $editId = null;
     public ?string $deleteId = null;
 
+    public string $search = '';
+
+    public function resetSearch(): void
+    {
+        $this->reset('search');
+    }
+
     public string $materi_id = '';
     public string $deskripsi = '';
 
@@ -165,7 +172,15 @@ class ModulManager extends BaseComponent
 
     public function render()
     {
-        $items = Modul::with('mapel', 'kelas')->where('guru_id', $this->guruId())->orderBy('mapel_id')->orderBy('urutan')->get();
+        $query = Modul::with('mapel', 'kelas')->where('guru_id', $this->guruId());
+
+        $term = trim($this->search);
+        if ($term !== '') {
+            $query->where('judul_modul', 'like', '%' . $term . '%');
+        }
+
+        $totalModul = Modul::where('guru_id', $this->guruId())->count();
+        $items = $query->orderBy('mapel_id')->orderBy('urutan')->get();
 
         $items->each(function ($m) {
             $m->jumlah_soal_pretest = SoalKuis::where('kuis_id', $m->pretest_kuis_id)->count();
@@ -175,6 +190,7 @@ class ModulManager extends BaseComponent
 
         return $this->view('livewire.guru.modul-manager', [
             'items' => $items,
+            'totalModul' => $totalModul,
             'availableMateri' => $this->availableMateri(),
         ], 'Modul Pembelajaran', 'Kelola modul: pre-test, materi, dan post-test per mata pelajaran');
     }

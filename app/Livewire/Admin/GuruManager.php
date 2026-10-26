@@ -6,9 +6,25 @@ use App\Livewire\BaseComponent;
 use App\Models\Guru;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Livewire\WithPagination;
 
 class GuruManager extends BaseComponent
 {
+    use WithPagination;
+
+    public string $search = '';
+
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function resetSearch(): void
+    {
+        $this->reset('search');
+        $this->resetPage();
+    }
+
     public bool $showModal = false;
     public ?string $editId = null;
     public ?string $deleteId = null;
@@ -130,8 +146,27 @@ class GuruManager extends BaseComponent
 
     public function render()
     {
+        $query = Guru::with('user')->orderBy('nama_guru');
+
+        $term = trim($this->search);
+        if ($term !== '') {
+            $userIds = User::where('role', 'guru')
+                ->where('email', 'like', '%' . $term . '%')
+                ->pluck('_id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+
+            $query->where(function ($q) use ($term, $userIds) {
+                $q->where('nama_guru', 'like', '%' . $term . '%')
+                  ->orWhere('nip', 'like', '%' . $term . '%');
+                if ($userIds) {
+                    $q->orWhereIn('user_id', $userIds);
+                }
+            });
+        }
+
         return $this->view('livewire.admin.guru-manager', [
-            'items' => Guru::with('user')->orderBy('nama_guru')->get(),
+            'items' => $query->paginate(10),
         ], 'Data Guru', 'Kelola data guru dan akun pengajar');
     }
 }

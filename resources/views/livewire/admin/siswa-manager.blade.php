@@ -20,7 +20,11 @@
             @endif
             <p class="text-[13px] text-ink-soft/60 whitespace-nowrap">{{ $items->total() }} siswa</p>
         </div>
-        <div class="flex items-center gap-2 self-start lg:self-auto">
+        <div class="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+            <button type="button" wire:click="openImport"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-[13.5px] font-semibold text-ink hover:bg-gray-50 transition-colors">
+                {!! \App\Support\Icons::svg('upload', 'w-4 h-4') !!} Import
+            </button>
             <button type="button" wire:click="export" wire:loading.attr="disabled" wire:target="export"
                     class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-[13.5px] font-semibold text-ink hover:bg-gray-50 transition-colors disabled:opacity-60">
                 {!! \App\Support\Icons::svg('download', 'w-4 h-4') !!}
@@ -132,6 +136,68 @@
                 <button type="submit" class="btn-primary">Simpan</button>
             </div>
         </form>
+    </x-modal>
+
+    <x-modal wire-show="showImportModal" title="Import Data Siswa" maxWidth="max-w-xl">
+        <div class="space-y-4">
+            @if($importResult)
+                <div class="rounded-lg p-4 {{ $importResult['created'] > 0 ? 'bg-mint-50' : 'bg-gray-50' }}">
+                    <p class="text-[14px] font-semibold text-ink">{{ $importResult['created'] }} siswa berhasil ditambahkan</p>
+                    @if(count($importResult['errors']))
+                        <p class="text-[12.5px] text-ink-soft/70 mt-0.5">{{ count($importResult['errors']) }} baris dilewati karena bermasalah:</p>
+                    @endif
+                </div>
+                @if(count($importResult['errors']))
+                    <div class="max-h-60 overflow-y-auto scroll-thin rounded-lg border border-gray-200 divide-y divide-gray-100">
+                        @foreach($importResult['errors'] as $err)
+                            <div class="px-3 py-2 text-[12.5px]">
+                                <span class="font-semibold text-ink">Baris {{ $err['baris'] }}</span>
+                                <span class="text-ink-soft/60">({{ $err['nama'] }})</span>
+                                <p class="text-danger">{{ $err['pesan'] }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" wire:click="openImport" class="px-4 py-2.5 rounded-lg text-[13.5px] font-semibold text-ink-soft/70 hover:bg-primary-50 transition-colors">Import lagi</button>
+                    <button type="button" wire:click="closeImport" class="btn-primary">Selesai</button>
+                </div>
+            @else
+                <ol class="text-[13px] text-ink-soft/80 space-y-1.5 list-decimal pl-5">
+                    <li>Unduh template, lalu isi data siswa di Excel (satu siswa per baris, hapus baris contoh).</li>
+                    <li>Simpan sebagai <span class="font-semibold">CSV</span> (File → Save As → CSV).</li>
+                    <li>Unggah file di bawah, lalu klik <span class="font-semibold">Import</span>.</li>
+                </ol>
+
+                <button type="button" wire:click="downloadTemplate"
+                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-primary-300 bg-primary-50/50 text-[13.5px] font-semibold text-primary-700 hover:bg-primary-50 transition-colors">
+                    {!! \App\Support\Icons::svg('download', 'w-4 h-4') !!} Unduh Template CSV
+                </button>
+
+                <div class="text-[12px] text-ink-soft/70 bg-gray-50 rounded-lg px-3 py-2.5 space-y-1">
+                    <p><span class="font-semibold text-ink">Kolom:</span> nama_siswa, nis, email, jenis_kelamin, kelas, alamat (opsional)</p>
+                    <p><span class="font-semibold text-ink">jenis_kelamin:</span> Laki-laki / Perempuan (boleh L / P)</p>
+                    <p><span class="font-semibold text-ink">kelas:</span> {{ $kelasList->pluck('nama_kelas')->implode(', ') ?: '-' }}</p>
+                    <p>Kata sandi semua akun baru: <span class="font-mono font-semibold">password</span>. NIS/email yang sudah terdaftar akan dilewati.</p>
+                </div>
+
+                <div>
+                    <label class="block text-[13px] font-semibold text-ink mb-1.5">File CSV</label>
+                    <input type="file" wire:model="importFile" accept=".csv,text/csv"
+                           class="block w-full text-[13px] text-ink border border-gray-300 rounded-lg cursor-pointer bg-white file:mr-3 file:py-2 file:px-3 file:border-0 file:bg-primary-50 file:text-primary-700 file:font-semibold hover:file:bg-primary-100">
+                    <p wire:loading wire:target="importFile" class="text-[12px] text-ink-soft/60 mt-1.5">Mengunggah file…</p>
+                    @error('importFile') <p class="text-danger text-[12.5px] mt-1.5 font-medium">{{ $message }}</p> @enderror
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" wire:click="closeImport" class="px-4 py-2.5 rounded-lg text-[13.5px] font-semibold text-ink-soft/70 hover:bg-primary-50 transition-colors">Batal</button>
+                    <button type="button" wire:click="import" wire:loading.attr="disabled" wire:target="import,importFile" class="btn-primary disabled:opacity-60">
+                        <span wire:loading.remove wire:target="import">Import</span>
+                        <span wire:loading wire:target="import">Memproses…</span>
+                    </button>
+                </div>
+            @endif
+        </div>
     </x-modal>
 
     <x-confirm-delete wire-show="deleteId">Hapus data siswa ini?</x-confirm-delete>
